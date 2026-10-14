@@ -3,482 +3,296 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suno CDN Link Grabber & Inspector</title>
+  <title>Suno MP3 Downloader</title>
   <style>
     :root {
-      --bg-main: #090d16;
-      --bg-card: #151e2e;
-      --bg-input: #0d131f;
-      --text-primary: #f8fafc;
-      --text-muted: #94a3b8;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --input: #090d16;
+      --text: #f8fafc;
+      --muted: #94a3b8;
       --amber: #f59e0b;
-      --amber-hover: #d97706;
       --green: #10b981;
       --red: #ef4444;
-      --blue: #3b82f6;
-      --border: #2e3c54;
+      --border: #334155;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-primary);
-      min-height: 100vh;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1rem;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      padding: 1rem;
     }
-
-    .container {
-      background-color: var(--bg-card);
+    .app {
+      background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
       width: 100%;
-      max-width: 560px;
-      padding: 1.4rem;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-      margin-top: 0.5rem;
+      max-width: 500px;
+      padding: 1.25rem;
     }
-
-    .header {
-      margin-bottom: 1.2rem;
-      padding-bottom: 0.9rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .header h1 {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--amber);
-      margin-bottom: 0.3rem;
-    }
-
-    .header p {
-      font-size: 0.83rem;
-      color: var(--text-muted);
-      line-height: 1.45;
-    }
-
-    .form-box {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .label-text {
-      font-size: 0.76rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    input[type="text"] {
+    h1 { font-size: 1.2rem; color: var(--amber); margin-bottom: 0.3rem; }
+    p.sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+    .field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.85rem; }
+    label { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+    input {
       width: 100%;
-      background-color: var(--bg-input);
+      background: var(--input);
       border: 1px solid var(--border);
-      color: var(--text-primary);
-      padding: 0.75rem 0.9rem;
+      color: var(--text);
+      padding: 0.75rem;
       border-radius: 8px;
       font-size: 0.88rem;
       outline: none;
     }
-
-    input[type="text"]:focus {
-      border-color: var(--amber);
-    }
-
-    .chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-
+    input:focus { border-color: var(--amber); }
+    .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
     .chip {
-      background-color: var(--bg-input);
+      background: var(--input);
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      font-size: 0.74rem;
-      padding: 0.35rem 0.65rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
       border-radius: 6px;
       cursor: pointer;
     }
-
-    .chip:hover {
-      border-color: var(--amber);
-      color: var(--text-primary);
-    }
-
     .btn {
-      background-color: var(--amber);
+      width: 100%;
+      background: var(--amber);
       color: #090d16;
       border: none;
-      padding: 0.8rem 1rem;
+      padding: 0.8rem;
       border-radius: 8px;
       font-weight: 700;
       font-size: 0.9rem;
       cursor: pointer;
-      width: 100%;
-      transition: background-color 0.2s;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
     }
-
-    .btn:hover:not(:disabled) {
-      background-color: var(--amber-hover);
-      color: #ffffff;
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #fff; margin-top: 0.5rem; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
     }
-
-    .btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-
-    .alert {
+    .status {
       display: none;
-      margin-top: 1rem;
-      padding: 0.75rem 0.9rem;
+      margin-top: 0.85rem;
+      padding: 0.7rem;
       border-radius: 8px;
       font-size: 0.82rem;
-      line-height: 1.45;
       word-break: break-word;
     }
-
-    .alert.info {
-      display: block;
-      background-color: rgba(59, 130, 246, 0.15);
-      border: 1px solid var(--blue);
-      color: #93c5fd;
-    }
-
-    .alert.success {
-      display: block;
-      background-color: rgba(16, 185, 129, 0.15);
-      border: 1px solid var(--green);
-      color: #6ee7b7;
-    }
-
-    .alert.error {
-      display: block;
-      background-color: rgba(239, 68, 68, 0.15);
-      border: 1px solid var(--red);
-      color: #fca5a5;
-    }
-
-    .inspector-panel {
+    .status.info { display: block; background: rgba(245,158,11,0.15); border: 1px solid var(--amber); color: #fde68a; }
+    .status.success { display: block; background: rgba(16,185,129,0.15); border: 1px solid var(--green); color: #6ee7b7; }
+    .status.error { display: block; background: rgba(239,68,68,0.15); border: 1px solid var(--red); color: #fca5a5; }
+    .result {
       display: none;
-      margin-top: 1.25rem;
-      padding-top: 1.25rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
       border-top: 1px solid var(--border);
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
-
-    .inspector-panel.visible {
+    .result.active { display: flex; }
+    .meta-box {
       display: flex;
-    }
-
-    .cdn-item {
-      background-color: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-    }
-
-    .cdn-item-header {
-      display: flex;
-      justify-content: space-between;
+      gap: 0.75rem;
       align-items: center;
+      background: var(--input);
+      padding: 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
     }
-
-    .cdn-tag {
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: var(--green);
-      text-transform: uppercase;
-    }
-
-    .copy-mini-btn {
-      background-color: var(--border);
-      color: var(--text-primary);
-      border: none;
-      font-size: 0.72rem;
-      padding: 0.25rem 0.6rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .copy-mini-btn:hover {
-      background-color: var(--amber);
-      color: #090d16;
-    }
-
-    .cdn-url-box {
-      font-family: monospace;
-      font-size: 0.78rem;
-      color: #cbd5e1;
-      word-break: break-all;
-      background-color: #060911;
-      padding: 0.5rem;
-      border-radius: 4px;
-      border: 1px solid #1e293b;
-    }
-
-    audio {
-      width: 100%;
-      height: 40px;
-    }
-
-    .json-preview {
+    .cover { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--border); }
+    .meta-text { overflow: hidden; flex: 1; }
+    .title { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cdn-box {
+      background: var(--input);
+      border: 1px solid var(--border);
+      padding: 0.6rem;
+      border-radius: 6px;
       font-family: monospace;
       font-size: 0.75rem;
       color: #93c5fd;
-      background-color: #060911;
-      padding: 0.75rem;
-      border-radius: 6px;
-      border: 1px solid #1e293b;
-      white-space: pre-wrap;
       word-break: break-all;
     }
+    audio { width: 100%; height: 40px; }
   </style>
 </head>
 <body>
 
-  <main class="container">
-    <header class="header">
-      <h1>Suno CDN Link Grabber</h1>
-      <p>Alat untuk membedah link lagu Suno AI (<code>suno.com/song/...</code> atau <code>suno.com/s/...</code>) menjadi link langsung <strong>CDN MP3, MP4, dan Cover Image</strong>.</p>
-    </header>
+  <main class="app">
+    <h1>Suno AI MP3 & CDN Grabber</h1>
+    <p class="sub">Tempel link lagu Suno AI untuk mengambil link CDN dan mengunduh MP3 durasi penuh.</p>
 
-    <form id="grabberForm" class="form-box" novalidate>
-      <label for="sunoInput" class="label-text">Masukkan Link Share Suno AI</label>
-      <input 
-        type="text" 
-        id="sunoInput" 
-        value="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9" 
-        placeholder="https://suno.com/song/xxxx-xxxx..." 
-        required 
-        autocomplete="off"
-      >
-      <div class="chip-row">
-        <button type="button" class="chip" data-link="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9">
-          Tes Link Suno #1
-        </button>
-        <button type="button" class="chip" data-link="https://suno.com/song/6f4c4902-8f61-4250-98a4-43c65cf28024">
-          Tes Link Suno #2
-        </button>
+    <form id="sunoForm" novalidate>
+      <div class="field">
+        <label for="urlInput">Link Lagu Suno / UUID</label>
+        <input type="text" id="urlInput" value="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9" required>
       </div>
 
-      <button type="submit" id="grabBtn" class="btn">
-        Bedah & Ambil Link CDN Suno
-      </button>
+      <div class="chips">
+        <button type="button" class="chip" data-url="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9">Sampel Suno #1</button>
+        <button type="button" class="chip" data-url="https://suno.com/song/6f4c4902-8f61-4250-98a4-43c65cf28024">Sampel Suno #2</button>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn">Ambil Link CDN & MP3</button>
     </form>
 
-    <div id="alertBanner" class="alert" role="alert"></div>
+    <div id="statusBox" class="status"></div>
 
-    <section id="inspectorPanel" class="inspector-panel">
-      <!-- Preview Player -->
-      <div class="cdn-item">
-        <span class="cdn-tag">Preview Audio Langsung dari CDN1 Suno</span>
-        <audio id="audioPreview" controls preload="metadata"></audio>
-      </div>
-
-      <!-- Hasil Link CDN MP3 -->
-      <div class="cdn-item">
-        <div class="cdn-item-header">
-          <span class="cdn-tag">1. Direct Link CDN Audio (.MP3)</span>
-          <button type="button" class="copy-mini-btn" data-target="mp3UrlText">Salin Link MP3</button>
+    <section id="resultBox" class="result">
+      <div class="meta-box">
+        <img id="coverImg" class="cover" src="" alt="Cover">
+        <div class="meta-text">
+          <div id="songTitle" class="title">-</div>
+          <div id="songUuid" style="font-size:0.74rem; color:var(--muted);">-</div>
         </div>
-        <div id="mp3UrlText" class="cdn-url-box">-</div>
       </div>
 
-      <!-- Hasil Link CDN MP4 Video -->
-      <div class="cdn-item">
-        <div class="cdn-item-header">
-          <span class="cdn-tag">2. Direct Link CDN Video (.MP4)</span>
-          <button type="button" class="copy-mini-btn" data-target="mp4UrlText">Salin Link MP4</button>
-        </div>
-        <div id="mp4UrlText" class="cdn-url-box">-</div>
+      <audio id="player" controls preload="metadata"></audio>
+
+      <div>
+        <label>Direct Link CDN MP3:</label>
+        <div id="cdnMp3Text" class="cdn-box" style="margin-top:0.3rem;">-</div>
       </div>
 
-      <!-- Hasil Link CDN Cover Image -->
-      <div class="cdn-item">
-        <div class="cdn-item-header">
-          <span class="cdn-tag">3. Direct Link CDN Cover (.JPEG)</span>
-          <button type="button" class="copy-mini-btn" data-target="imgUrlText">Salin Link Gambar</button>
-        </div>
-        <div id="imgUrlText" class="cdn-url-box">-</div>
-      </div>
-
-      <!-- Hasil JSON Payload -->
-      <div class="cdn-item">
-        <span class="cdn-tag">Hasil Bedah Data (JSON Format)</span>
-        <pre id="jsonOutput" class="json-preview"></pre>
-      </div>
+      <button type="button" id="downloadBtn" class="btn btn-green">Download File MP3 Penuh</button>
+      <a id="openTabBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Buka MP3 di Tab Baru</a>
     </section>
   </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const grabberForm = document.getElementById('grabberForm');
-      const sunoInput = document.getElementById('sunoInput');
-      const grabBtn = document.getElementById('grabBtn');
-      const alertBanner = document.getElementById('alertBanner');
-      const inspectorPanel = document.getElementById('inspectorPanel');
-      const audioPreview = document.getElementById('audioPreview');
-      const mp3UrlText = document.getElementById('mp3UrlText');
-      const mp4UrlText = document.getElementById('mp4UrlText');
-      const imgUrlText = document.getElementById('imgUrlText');
-      const jsonOutput = document.getElementById('jsonOutput');
+      const form = document.getElementById('sunoForm');
+      const urlInput = document.getElementById('urlInput');
+      const submitBtn = document.getElementById('submitBtn');
+      const statusBox = document.getElementById('statusBox');
+      const resultBox = document.getElementById('resultBox');
+      const coverImg = document.getElementById('coverImg');
+      const songTitle = document.getElementById('songTitle');
+      const songUuid = document.getElementById('songUuid');
+      const player = document.getElementById('player');
+      const cdnMp3Text = document.getElementById('cdnMp3Text');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const openTabBtn = document.getElementById('openTabBtn');
       const chips = document.querySelectorAll('.chip');
-      const copyButtons = document.querySelectorAll('.copy-mini-btn');
 
-      const showAlert = (text, type = 'info') => {
-        alertBanner.textContent = text;
-        alertBanner.className = `alert ${type}`;
+      let activeMp3Url = '';
+      let activeFileName = 'suno-audio.mp3';
+
+      const setStatus = (msg, type = 'info') => {
+        statusBox.textContent = msg;
+        statusBox.className = `status ${type}`;
       };
 
-      // Fungsi Regex untuk mengambil UUID 36 karakter dari string apa pun
-      const extractSunoUuid = (str) => {
+      const findUuid = (str) => {
         if (typeof str !== 'string') return null;
-        const match = str.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-        return match ? match[0].toLowerCase() : null;
+        const m = str.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+        return m ? m[0].toLowerCase() : null;
       };
 
-      // Fungsi Scrape HTML jika user menempelkan Shortlink Suno (suno.com/s/xxxx)
-      const fetchUuidFromShortLink = async (shortUrl) => {
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(shortUrl)}`;
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Gagal menghubungi proxy pembaca HTML (HTTP ${response.status}).`);
-        }
-
-        const rawJson = await response.text();
-        let parsed;
+      const resolveShortLink = async (url) => {
         try {
-          parsed = JSON.parse(rawJson);
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
+          const raw = await res.text();
+          const json = JSON.parse(raw);
+          if (!json || typeof json.contents !== 'string') return null;
+          return findUuid(json.contents);
         } catch (_) {
-          throw new Error('Respons proxy bukan JSON yang valid.');
+          return null;
         }
-
-        if (!parsed || typeof parsed.contents !== 'string') {
-          throw new Error('Konten halaman Suno kosong atau tidak terbaca.');
-        }
-
-        const html = parsed.contents;
-
-        // Cari meta og:audio atau UUID langsung di dalam HTML Suno
-        const ogAudioMatch = html.match(/https:\/\/cdn1\.suno\.ai\/([0-9a-f-]{36})\.mp3/i);
-        if (ogAudioMatch && ogAudioMatch[1]) {
-          return ogAudioMatch[1].toLowerCase();
-        }
-
-        return extractSunoUuid(html);
       };
 
-      // Fungsi Utama Pembentuk Link CDN Suno
-      const handleGrabCdnLinks = async (rawInput) => {
-        inspectorPanel.classList.remove('visible');
-        audioPreview.pause();
-        grabBtn.disabled = true;
-        grabBtn.textContent = 'Membedah Link Suno...';
-        showAlert('Mencari pola UUID 36 karakter pada link...', 'info');
+      const processSuno = async (inputStr) => {
+        resultBox.classList.remove('active');
+        player.pause();
+        submitBtn.disabled = true;
+        setStatus('Mengekstrak kode UUID & merakit link CDN Suno...', 'info');
 
         try {
-          const cleanInput = String(rawInput || '').trim();
-          let uuid = extractSunoUuid(cleanInput);
+          let uuid = findUuid(inputStr);
 
-          // Jika belum ketemu UUID karena berupa short-link (suno.com/s/...), bedah halaman HTML-nya
-          if (!uuid && cleanInput.startsWith('http')) {
-            showAlert('Short-link terdeteksi! Membaca tag <meta property="og:audio"> dari halaman Suno...', 'info');
-            uuid = await fetchUuidFromShortLink(cleanInput);
+          if (!uuid && inputStr.startsWith('http')) {
+            setStatus('Membaca Short-Link Suno via Proxy...', 'info');
+            uuid = await resolveShortLink(inputStr);
           }
 
           if (!uuid) {
-            throw new Error('Gagal menemukan UUID lagu Suno. Pastikan kamu menempelkan link lagu dari Suno AI.');
+            throw new Error('Kode UUID tidak ditemukan. Pastikan link berasal dari Suno AI.');
           }
 
-          // Rakit semua endpoint CDN Suno AI berdasarkan UUID
-          const cdnData = {
-            songUuid: uuid,
-            sourcePage: `https://suno.com/song/${uuid}`,
-            cdnAudioMp3: `https://cdn1.suno.ai/${uuid}.mp3`,
-            cdnVideoMp4: `https://cdn1.suno.ai/${uuid}.mp4`,
-            cdnCoverImage: `https://cdn2.suno.ai/image_${uuid}.jpeg`,
-            cdnLargeCover: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
-          };
+          const mp3Url = `https://cdn1.suno.ai/${uuid}.mp3`;
+          const imgUrl = `https://cdn2.suno.ai/image_${uuid}.jpeg`;
 
-          // Tampilkan ke UI
-          mp3UrlText.textContent = cdnData.cdnAudioMp3;
-          mp4UrlText.textContent = cdnData.cdnVideoMp4;
-          imgUrlText.textContent = cdnData.cdnCoverImage;
-          jsonOutput.textContent = JSON.stringify(cdnData, null, 2);
+          activeMp3Url = mp3Url;
+          activeFileName = `suno-${uuid.slice(0, 8)}.mp3`;
 
-          audioPreview.src = cdnData.cdnAudioMp3;
-          audioPreview.load();
+          coverImg.src = imgUrl;
+          songTitle.textContent = `Suno Track (${uuid.slice(0, 8)})`;
+          songUuid.textContent = `UUID: ${uuid}`;
+          cdnMp3Text.textContent = mp3Url;
+          player.src = mp3Url;
+          openTabBtn.href = mp3Url;
 
-          inspectorPanel.classList.add('visible');
-          showAlert(`Berhasil! Kode UUID (${uuid}) telah dirakit menjadi Direct Link CDN Suno.`, 'success');
-
+          resultBox.classList.add('active');
+          setStatus('Berhasil! Link CDN MP3 ditemukan dan siap diunduh.', 'success');
         } catch (err) {
-          showAlert(err.message || 'Terjadi kesalahan saat membedah link.', 'error');
+          setStatus(err.message || 'Gagal memproses link.', 'error');
         } finally {
-          grabBtn.disabled = false;
-          grabBtn.textContent = 'Bedah & Ambil Link CDN Suno';
+          submitBtn.disabled = false;
         }
       };
 
-      // Event Listener Form Submit
-      grabberForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const val = sunoInput.value.trim();
-        if (!val) {
-          showAlert('Tempelkan link Suno terlebih dahulu.', 'error');
-          return;
+      downloadBtn.addEventListener('click', async () => {
+        if (!activeMp3Url) return;
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Mengunduh MP3...';
+
+        try {
+          const res = await fetch(activeMp3Url);
+          if (!res.ok) throw new Error('CORS Fallback');
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = activeFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 8000);
+          setStatus(`File "${activeFileName}" berhasil diunduh!`, 'success');
+        } catch (_) {
+          window.open(activeMp3Url, '_blank', 'noopener,noreferrer');
+          setStatus('File MP3 dibuka di tab baru. Klik titik tiga pada player untuk menyimpan.', 'info');
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = 'Download File MP3 Penuh';
         }
-        handleGrabCdnLinks(val);
       });
 
-      // Event Listener Chip Contoh
-      chips.forEach((chip) => {
-        chip.addEventListener('click', () => {
-          const targetLink = chip.getAttribute('data-link');
-          if (targetLink) {
-            sunoInput.value = targetLink;
-            handleGrabCdnLinks(targetLink);
-          }
-        });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const val = urlInput.value.trim();
+        if (val) processSuno(val);
       });
 
-      // Event Listener Tombol Copy masing-masing link CDN
-      copyButtons.forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const targetId = btn.getAttribute('data-target');
-          const targetEl = document.getElementById(targetId);
-          if (!targetEl) return;
-
-          const urlToCopy = targetEl.textContent.trim();
-          try {
-            await navigator.clipboard.writeText(urlToCopy);
-            const originalText = btn.textContent;
-            btn.textContent = 'Tersalin!';
-            setTimeout(() => {
-              btn.textContent = originalText;
-            }, 1500);
-          } catch (_) {
-            showAlert(`Silakan blok dan salin manual teks link: ${urlToCopy}`, 'info');
+      chips.forEach((c) => {
+        c.addEventListener('click', () => {
+          const u = c.getAttribute('data-url');
+          if (u) {
+            urlInput.value = u;
+            processSuno(u);
           }
         });
       });
