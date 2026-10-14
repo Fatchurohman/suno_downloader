@@ -3,298 +3,307 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suno MP3 Downloader</title>
+  <title>Suno Library Bulk Downloader & Script</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --input: #090d16;
+      --bg: #090d16;
+      --card: #151e2e;
+      --input: #0d131f;
       --text: #f8fafc;
       --muted: #94a3b8;
       --amber: #f59e0b;
       --green: #10b981;
+      --blue: #3b82f6;
       --red: #ef4444;
-      --border: #334155;
+      --border: #2e3c54;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 1rem;
       display: flex;
       justify-content: center;
     }
-    .app {
+    .container {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .panel {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      width: 100%;
-      max-width: 500px;
       padding: 1.25rem;
     }
-    h1 { font-size: 1.2rem; color: var(--amber); margin-bottom: 0.3rem; }
-    p.sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
-    .field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.85rem; }
-    label { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
-    input {
+    h1 { font-size: 1.15rem; color: var(--amber); margin-bottom: 0.35rem; }
+    h2 { font-size: 1rem; color: var(--text); margin-bottom: 0.35rem; }
+    p.desc { font-size: 0.82rem; color: var(--muted); line-height: 1.45; margin-bottom: 0.9rem; }
+    textarea {
       width: 100%;
+      min-height: 95px;
       background: var(--input);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 0.75rem;
       border-radius: 8px;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       outline: none;
+      resize: vertical;
+      margin-bottom: 0.65rem;
     }
-    input:focus { border-color: var(--amber); }
-    .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
-    .chip {
-      background: var(--input);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.75rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+    textarea:focus { border-color: var(--amber); }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .btn {
       width: 100%;
       background: var(--amber);
       color: #090d16;
       border: none;
-      padding: 0.8rem;
+      padding: 0.75rem;
       border-radius: 8px;
       font-weight: 700;
-      font-size: 0.9rem;
+      font-size: 0.86rem;
       cursor: pointer;
+      text-align: center;
       text-decoration: none;
       display: inline-block;
-      text-align: center;
     }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-green { background: var(--green); color: #fff; margin-top: 0.5rem; }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border);
+    .btn-secondary {
+      background: var(--input);
       color: var(--text);
-      margin-top: 0.5rem;
-      font-size: 0.82rem;
+      border: 1px solid var(--border);
     }
+    .btn-green { background: var(--green); color: #fff; }
     .status {
       display: none;
-      margin-top: 0.85rem;
+      margin-top: 0.75rem;
       padding: 0.7rem;
       border-radius: 8px;
-      font-size: 0.82rem;
-      word-break: break-word;
+      font-size: 0.8rem;
     }
-    .status.info { display: block; background: rgba(245,158,11,0.15); border: 1px solid var(--amber); color: #fde68a; }
+    .status.info { display: block; background: rgba(59,130,246,0.15); border: 1px solid var(--blue); color: #93c5fd; }
     .status.success { display: block; background: rgba(16,185,129,0.15); border: 1px solid var(--green); color: #6ee7b7; }
     .status.error { display: block; background: rgba(239,68,68,0.15); border: 1px solid var(--red); color: #fca5a5; }
-    .result {
-      display: none;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border);
+    .song-list {
+      display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      margin-top: 1rem;
     }
-    .result.active { display: flex; }
-    .meta-box {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
+    .song-item {
       background: var(--input);
-      padding: 0.65rem;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      border: 1px solid var(--border);
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
     }
-    .cover { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--border); }
-    .meta-text { overflow: hidden; flex: 1; }
-    .title { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cdn-box {
+    .song-head {
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+    }
+    .song-head img {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--border);
+    }
+    .song-meta { overflow: hidden; flex: 1; }
+    .song-title { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .song-uuid { font-family: monospace; font-size: 0.72rem; color: var(--muted); }
+    audio { width: 100%; height: 36px; }
+    .code-box {
       background: var(--input);
       border: 1px solid var(--border);
-      padding: 0.6rem;
+      padding: 0.65rem;
       border-radius: 6px;
       font-family: monospace;
-      font-size: 0.75rem;
-      color: #93c5fd;
+      font-size: 0.74rem;
+      color: #fde68a;
       word-break: break-all;
+      max-height: 90px;
+      overflow-y: auto;
+      margin-bottom: 0.65rem;
     }
-    audio { width: 100%; height: 40px; }
+    .steps {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding-left: 1.1rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
   </style>
 </head>
 <body>
 
-  <main class="app">
-    <h1>Suno AI MP3 & CDN Grabber</h1>
-    <p class="sub">Tempel link lagu Suno AI untuk mengambil link CDN dan mengunduh MP3 durasi penuh.</p>
+  <main class="container">
+    <!-- BAGIAN 1: BULK SCANNER DI DALAM INDEX.HTML -->
+    <section class="panel">
+      <h1>1. Suno Multi-Song Scanner (Bulk MP3)</h1>
+      <p class="desc">Tempelkan banyak link lagu Suno sekaligus di bawah ini. Aplikasi akan mendata semua lagu beserta player dan tombol download MP3 penuhnya.</p>
 
-    <form id="sunoForm" novalidate>
-      <div class="field">
-        <label for="urlInput">Link Lagu Suno / UUID</label>
-        <input type="text" id="urlInput" value="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9" required>
+      <textarea id="bulkInput" placeholder="Tempel 1 atau banyak link lagu Suno di sini..."></textarea>
+
+      <div class="btn-row">
+        <button type="button" id="sampleBulkBtn" class="btn btn-secondary">Isi 2 Lagu Contoh</button>
+        <button type="button" id="scanBulkBtn" class="btn">Scan Semua Lagu</button>
       </div>
 
-      <div class="chips">
-        <button type="button" class="chip" data-url="https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9">Sampel Suno #1</button>
-        <button type="button" class="chip" data-url="https://suno.com/song/6f4c4902-8f61-4250-98a4-43c65cf28024">Sampel Suno #2</button>
-      </div>
+      <div id="statusBox" class="status"></div>
+      <div id="songListContainer" class="song-list"></div>
+    </section>
 
-      <button type="submit" id="submitBtn" class="btn">Ambil Link CDN & MP3</button>
-    </form>
+    <!-- BAGIAN 2: GENERATOR SCRIPT BOOKMARKLET CHROME HP -->
+    <section class="panel">
+      <h2>2. Script Bookmarklet (Untuk Halaman Suno di Chrome HP)</h2>
+      <p class="desc">Pasang script satu baris ini di Bookmark Chrome HP untuk memindai semua lagu yang tampil di halaman Library <code>suno.com</code> saat kamu login:</p>
 
-    <div id="statusBox" class="status"></div>
+      <ol class="steps">
+        <li>Klik tombol <strong>Salin Script Bookmarklet</strong> di bawah.</li>
+        <li>Buat Bookmark bebas di Chrome HP, lalu edit bagian <strong>URL</strong>-nya dan tempel script ini (beri nama misal: <code>SunoDL</code>).</li>
+        <li>Buka <code>suno.com</code> (posisi Sign-In di Library), ketik <code>SunoDL</code> di bar alamat atas, lalu klik bookmark yang muncul.</li>
+      </ol>
 
-    <section id="resultBox" class="result">
-      <div class="meta-box">
-        <img id="coverImg" class="cover" src="" alt="Cover">
-        <div class="meta-text">
-          <div id="songTitle" class="title">-</div>
-          <div id="songUuid" style="font-size:0.74rem; color:var(--muted);">-</div>
-        </div>
-      </div>
-
-      <audio id="player" controls preload="metadata"></audio>
-
-      <div>
-        <label>Direct Link CDN MP3:</label>
-        <div id="cdnMp3Text" class="cdn-box" style="margin-top:0.3rem;">-</div>
-      </div>
-
-      <button type="button" id="downloadBtn" class="btn btn-green">Download File MP3 Penuh</button>
-      <a id="openTabBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline">Buka MP3 di Tab Baru</a>
+      <div id="bookmarkletCode" class="code-box"></div>
+      <button type="button" id="copyScriptBtn" class="btn btn-green">Salin Script Bookmarklet</button>
     </section>
   </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('sunoForm');
-      const urlInput = document.getElementById('urlInput');
-      const submitBtn = document.getElementById('submitBtn');
+      const bulkInput = document.getElementById('bulkInput');
+      const sampleBulkBtn = document.getElementById('sampleBulkBtn');
+      const scanBulkBtn = document.getElementById('scanBulkBtn');
       const statusBox = document.getElementById('statusBox');
-      const resultBox = document.getElementById('resultBox');
-      const coverImg = document.getElementById('coverImg');
-      const songTitle = document.getElementById('songTitle');
-      const songUuid = document.getElementById('songUuid');
-      const player = document.getElementById('player');
-      const cdnMp3Text = document.getElementById('cdnMp3Text');
-      const downloadBtn = document.getElementById('downloadBtn');
-      const openTabBtn = document.getElementById('openTabBtn');
-      const chips = document.querySelectorAll('.chip');
+      const songListContainer = document.getElementById('songListContainer');
+      const bookmarkletCode = document.getElementById('bookmarkletCode');
+      const copyScriptBtn = document.getElementById('copyScriptBtn');
 
-      let activeMp3Url = '';
-      let activeFileName = 'suno-audio.mp3';
+      // Script Bookmarklet yang akan disuntikkan ke halaman suno.com saat user login
+      const BOOKMARKLET_RAW = `javascript:(function(){try{const links=Array.from(document.querySelectorAll('a[href*="/song/"]')).map(a=>a.href).join('\\n');const text=links||document.body.innerText;const m=text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)||[];const ids=[...new Set(m.map(x=>x.toLowerCase()))];if(!ids.length){alert('Tidak ada lagu Suno terdeteksi di layar ini. Scroll dulu halaman Library kamu lalu jalankan lagi.');return;}const old=document.getElementById('suno-dl-overlay');if(old)old.remove();const box=document.createElement('div');box.id='suno-dl-overlay';box.style.cssText='position:fixed;inset:10px;background:#0f172a;color:#fff;z-index:999999;padding:15px;border-radius:12px;border:2px solid #f59e0b;overflow-y:auto;font-family:sans-serif;';box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b style="color:#f59e0b;font-size:16px;">Ditemukan '+ids.length+' Lagu Suno</b><button onclick="this.parentElement.parentElement.remove()" style="background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;">Tutup</button></div>'+ids.map((id,i)=>'<div style="background:#1e293b;padding:10px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Lagu #'+(i+1)+' ('+id.slice(0,8)+')</span><a href="https://cdn1.suno.ai/'+id+'.mp3" target="_blank" download="suno-'+id.slice(0,8)+'.mp3" style="background:#10b981;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">Download MP3</a></div>').join('');document.body.appendChild(box);}catch(e){alert('Error: '+e.message);}})();`;
+
+      bookmarkletCode.textContent = BOOKMARKLET_RAW;
 
       const setStatus = (msg, type = 'info') => {
         statusBox.textContent = msg;
         statusBox.className = `status ${type}`;
       };
 
-      const findUuid = (str) => {
-        if (typeof str !== 'string') return null;
-        const m = str.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-        return m ? m[0].toLowerCase() : null;
+      // Ekstrak semua UUID unik dari teks/link menggunakan validasi JSON & Regex
+      const extractUniqueUuids = (rawText) => {
+        if (typeof rawText !== 'string' || !rawText.trim()) return [];
+        const matches = rawText.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
+        if (!matches) return [];
+        return [...new Set(matches.map((id) => id.toLowerCase()))];
       };
 
-      const resolveShortLink = async (url) => {
-        try {
-          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-          if (!res.ok) return null;
-          const raw = await res.text();
-          const json = JSON.parse(raw);
-          if (!json || typeof json.contents !== 'string') return null;
-          return findUuid(json.contents);
-        } catch (_) {
-          return null;
-        }
-      };
+      // Render daftar lagu ke UI
+      const renderSongList = (uuidList) => {
+        songListContainer.innerHTML = '';
 
-      const processSuno = async (inputStr) => {
-        resultBox.classList.remove('active');
-        player.pause();
-        submitBtn.disabled = true;
-        setStatus('Mengekstrak kode UUID & merakit link CDN Suno...', 'info');
-
-        try {
-          let uuid = findUuid(inputStr);
-
-          if (!uuid && inputStr.startsWith('http')) {
-            setStatus('Membaca Short-Link Suno via Proxy...', 'info');
-            uuid = await resolveShortLink(inputStr);
-          }
-
-          if (!uuid) {
-            throw new Error('Kode UUID tidak ditemukan. Pastikan link berasal dari Suno AI.');
-          }
-
+        uuidList.forEach((uuid, index) => {
           const mp3Url = `https://cdn1.suno.ai/${uuid}.mp3`;
-          const imgUrl = `https://cdn2.suno.ai/image_${uuid}.jpeg`;
+          const coverUrl = `https://cdn2.suno.ai/image_${uuid}.jpeg`;
+          const shortId = uuid.slice(0, 8);
 
-          activeMp3Url = mp3Url;
-          activeFileName = `suno-${uuid.slice(0, 8)}.mp3`;
+          const item = document.createElement('div');
+          item.className = 'song-item';
+          item.innerHTML = `
+            <div class="song-head">
+              <img src="${coverUrl}" alt="Cover">
+              <div class="song-meta">
+                <div class="song-title">Suno Track #${index + 1} (${shortId})</div>
+                <div class="song-uuid">UUID: ${uuid}</div>
+              </div>
+            </div>
+            <audio controls preload="none" src="${mp3Url}"></audio>
+            <div class="btn-row">
+              <button type="button" class="btn btn-green dl-trigger" data-mp3="${mp3Url}" data-name="suno-${shortId}.mp3">
+                Download MP3
+              </button>
+              <a href="${mp3Url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                Buka Tab Baru
+              </a>
+            </div>
+          `;
+          songListContainer.appendChild(item);
+        });
 
-          coverImg.src = imgUrl;
-          songTitle.textContent = `Suno Track (${uuid.slice(0, 8)})`;
-          songUuid.textContent = `UUID: ${uuid}`;
-          cdnMp3Text.textContent = mp3Url;
-          player.src = mp3Url;
-          openTabBtn.href = mp3Url;
+        // Pasang event listener untuk setiap tombol download Blob
+        songListContainer.querySelectorAll('.dl-trigger').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const url = btn.getAttribute('data-mp3');
+            const name = btn.getAttribute('data-name');
+            if (!url) return;
 
-          resultBox.classList.add('active');
-          setStatus('Berhasil! Link CDN MP3 ditemukan dan siap diunduh.', 'success');
-        } catch (err) {
-          setStatus(err.message || 'Gagal memproses link.', 'error');
-        } finally {
-          submitBtn.disabled = false;
-        }
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Mengunduh...';
+
+            try {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error('Redirect fallback');
+              const blob = await res.blob();
+              const blobUrl = URL.createObjectURL(blob);
+
+              const a = document.createElement('a');
+              a.href = blobUrl;
+              a.download = name;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 8000);
+            } catch (_) {
+              window.open(url, '_blank', 'noopener,noreferrer');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        });
       };
 
-      downloadBtn.addEventListener('click', async () => {
-        if (!activeMp3Url) return;
-        downloadBtn.disabled = true;
-        downloadBtn.textContent = 'Mengunduh MP3...';
+      // Event: Scan semua link yang ditempel
+      scanBulkBtn.addEventListener('click', () => {
+        const text = bulkInput.value;
+        const uuids = extractUniqueUuids(text);
 
-        try {
-          const res = await fetch(activeMp3Url);
-          if (!res.ok) throw new Error('CORS Fallback');
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = activeFileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 8000);
-          setStatus(`File "${activeFileName}" berhasil diunduh!`, 'success');
-        } catch (_) {
-          window.open(activeMp3Url, '_blank', 'noopener,noreferrer');
-          setStatus('File MP3 dibuka di tab baru. Klik titik tiga pada player untuk menyimpan.', 'info');
-        } finally {
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = 'Download File MP3 Penuh';
+        if (uuids.length === 0) {
+          songListContainer.innerHTML = '';
+          setStatus('Tidak ditemukan kode UUID lagu Suno. Klik "Isi 2 Lagu Contoh" untuk mencoba.', 'error');
+          return;
         }
+
+        renderSongList(uuids);
+        setStatus(`Berhasil memindai ${uuids.length} lagu Suno siap unduh!`, 'success');
       });
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const val = urlInput.value.trim();
-        if (val) processSuno(val);
+      // Event: Isi 2 contoh link lagu Suno
+      sampleBulkBtn.addEventListener('click', () => {
+        bulkInput.value = [
+          'https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9',
+          'https://suno.com/song/6f4c4902-8f61-4250-98a4-43c65cf28024'
+        ].join('\n');
+        scanBulkBtn.click();
       });
 
-      chips.forEach((c) => {
-        c.addEventListener('click', () => {
-          const u = c.getAttribute('data-url');
-          if (u) {
-            urlInput.value = u;
-            processSuno(u);
-          }
-        });
+      // Event: Salin kode Bookmarklet
+      copyScriptBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(BOOKMARKLET_RAW);
+          copyScriptBtn.textContent = 'Script Berhasil Disalin!';
+          setTimeout(() => {
+            copyScriptBtn.textContent = 'Salin Script Bookmarklet';
+          }, 2000);
+        } catch (_) {
+          setStatus('Silakan tahan dan salin manual teks kuning di dalam kotak.', 'info');
+        }
       });
     });
   </script>
