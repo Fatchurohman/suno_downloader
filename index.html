@@ -165,16 +165,10 @@
       font-size: 0.74rem;
       color: #fde68a;
       word-break: break-all;
-      max-height: 90px;
+      max-height: 110px;
       overflow-y: auto;
       margin-bottom: 0.65rem;
-    }
-    .steps {
-      font-size: 0.78rem;
-      color: var(--muted);
-      padding-left: 1.1rem;
-      line-height: 1.5;
-      margin-bottom: 0.75rem;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -187,7 +181,7 @@
       <p class="desc">Ubah teks menjadi suara dengan pengaturan karakter vokal (gender), intonasi, kecepatan, dan tinggi nada.</p>
 
       <label for="ttsInput">Teks yang akan diucapkan:</label>
-      <textarea id="ttsInput" placeholder="Tuliskan kalimat di sini...">Halo, selamat datang! Ini adalah contoh modul text to speech dengan pengaturan jenis kelamin dan gaya bicara yang fleksibel.</textarea>
+      <textarea id="ttsInput" placeholder="Tuliskan kalimat di sini...">Halo, selamat datang! Ini adalah modul text to speech dengan pengaturan vokal dan intonasi.</textarea>
 
       <div class="control-grid">
         <div>
@@ -250,7 +244,7 @@
     <!-- PANEL SUNO MULTI-SONG SCANNER -->
     <section class="panel">
       <h2>Suno Multi-Song Scanner (Bulk MP3)</h2>
-      <p class="desc">Tempel link lagu Suno untuk mengekstrak player dan tombol unduh file audio secara massal.</p>
+      <p class="desc">Tempel link lagu Suno untuk mengekstrak player dan tombol unduh file audio secara massal tanpa terbentur error XML.</p>
 
       <textarea id="bulkInput" placeholder="Tempel 1 atau banyak link lagu Suno di sini..."></textarea>
 
@@ -265,8 +259,8 @@
 
     <!-- PANEL GENERATOR BOOKMARKLET -->
     <section class="panel">
-      <h2>Script Bookmarklet Suno</h2>
-      <p class="desc">Jalankan di browser ponsel untuk mendata lagu langsung dari tab library.</p>
+      <h2>Script Bookmarklet Suno (Bebas Error XML)</h2>
+      <p class="desc">Jalankan di tab web Suno Library. Skrip ini membaca data audio langsung dari API resmi halaman agar terhindar dari error S3 XML.</p>
       <div id="bookmarkletCode" class="code-box"></div>
       <button type="button" id="copyScriptBtn" class="btn btn-purple">Salin Script Bookmarklet</button>
     </section>
@@ -305,11 +299,9 @@
         ttsStatus.className = `status ${type}`;
       };
 
-      // Deteksi gender berdasarkan nama & metadata suara sistem
       const detectVoiceGender = (voice) => {
         if (!voice || typeof voice.name !== 'string') return 'neutral';
         const name = voice.name.toLowerCase();
-        
         const femaleKeywords = ['female', 'zira', 'samantha', 'victoria', 'karen', 'helena', 'wanita', 'perempuan', 'girl', 'catherina', 'ayumi', 'haruka', 'yuna', 'natural female'];
         const maleKeywords = ['male', 'david', 'george', 'mark', 'richard', 'pria', 'laki', 'guy', 'natural male', 'stefan', 'ichiro'];
 
@@ -318,7 +310,6 @@
         return 'neutral';
       };
 
-      // Konfigurasi Preset Gaya Bicara
       const PRESET_CONFIGS = {
         standard: { pitch: 1.0, rate: 1.0 },
         formal: { pitch: 0.9, rate: 0.9 },
@@ -364,7 +355,6 @@
         }
       };
 
-      // Muat suara saat engine browser siap
       populateVoiceList();
       if (synth && synth.onvoiceschanged !== undefined) {
         synth.onvoiceschanged = populateVoiceList;
@@ -475,7 +465,8 @@
       const bookmarkletCode = document.getElementById('bookmarkletCode');
       const copyScriptBtn = document.getElementById('copyScriptBtn');
 
-      const BOOKMARKLET_RAW = `javascript:(function(){try{const links=Array.from(document.querySelectorAll('a[href*="/song/"]')).map(a=>a.href).join('\\n');const text=links||document.body.innerText;const m=text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)||[];const ids=[...new Set(m.map(x=>x.toLowerCase()))];if(!ids.length){alert('Tidak ada lagu Suno terdeteksi di layar ini. Scroll dulu halaman Library kamu lalu jalankan lagi.');return;}const old=document.getElementById('suno-dl-overlay');if(old)old.remove();const box=document.createElement('div');box.id='suno-dl-overlay';box.style.cssText='position:fixed;inset:10px;background:#0f172a;color:#fff;z-index:999999;padding:15px;border-radius:12px;border:2px solid #f59e0b;overflow-y:auto;font-family:sans-serif;';box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b style="color:#f59e0b;font-size:16px;">Ditemukan '+ids.length+' Lagu Suno</b><button onclick="this.parentElement.parentElement.remove()" style="background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;">Tutup</button></div>'+ids.map((id,i)=>'<div style="background:#1e293b;padding:10px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Lagu #'+(i+1)+' ('+id.slice(0,8)+')</span><a href="https://cdn1.suno.ai/'+id+'.mp3" target="_blank" download="suno-'+id.slice(0,8)+'.mp3" style="background:#10b981;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">Download MP3</a></div>').join('');document.body.appendChild(box);}catch(e){alert('Error: '+e.message);}})();`;
+      // Bookmarklet membaca endpoint internal Suno /api/clip/{id} langsung di domain suno.com (Bebas CORS & Akurat)
+      const BOOKMARKLET_RAW = `javascript:(async function(){try{const text=document.body.innerText+' '+Array.from(document.querySelectorAll('a[href*="/song/"]')).map(a=>a.href).join(' ');const matches=text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)||[];const ids=[...new Set(matches.map(x=>x.toLowerCase()))];if(!ids.length){alert('Tidak ditemukan track Suno. Buka halaman Library Suno, scroll ke bawah, lalu klik lagi.');return;}const existing=document.getElementById('suno-dl-box');if(existing)existing.remove();const box=document.createElement('div');box.id='suno-dl-box';box.style.cssText='position:fixed;inset:15px;background:#090d16;color:#f8fafc;z-index:9999999;padding:16px;border-radius:12px;border:2px solid #f59e0b;overflow-y:auto;font-family:sans-serif;box-shadow:0 10px 30px rgba(0,0,0,0.8);';box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h3 style="color:#f59e0b;margin:0;font-size:16px;">Suno Downloader ('+ids.length+' Lagu)</h3><button onclick="document.getElementById(\\'suno-dl-box\\').remove()" style="background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">Tutup</button></div><div id="suno-item-list" style="display:flex;flex-direction:column;gap:8px;">Sedang memuat tautan audio asli...</div>';document.body.appendChild(box);const list=document.getElementById('suno-item-list');list.innerHTML='';for(let i=0;i<ids.length;i++){const id=ids[i];let audioUrl='https://cdn1.suno.ai/'+id+'.mp3';let trackTitle='Lagu #'+(i+1)+' ('+id.slice(0,8)+')';try{const res=await fetch('/api/clip/'+id);if(res.ok){const data=await res.json();if(data&&typeof data==='object'&&data.audio_url){audioUrl=data.audio_url;if(data.title)trackTitle=data.title;}}}catch(_){}const row=document.createElement('div');row.style.cssText='background:#151e2e;padding:10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2e3c54;';row.innerHTML='<div style="overflow:hidden;margin-right:10px;"><div style="font-weight:bold;font-size:13px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">'+trackTitle+'</div><div style="font-size:11px;color:#94a3b8;font-family:monospace;">'+id.slice(0,8)+'</div></div><a href="'+audioUrl+'" target="_blank" download="'+trackTitle.replace(/[^a-zA-Z0-9]/g,'_')+'.mp3" style="background:#10b981;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;white-space:nowrap;">Download MP3</a>';list.appendChild(row);}}catch(e){alert('Gagal mengekstrak: '+e.message);}})();`;
 
       bookmarkletCode.textContent = BOOKMARKLET_RAW;
 
@@ -491,6 +482,64 @@
         return [...new Set(matches.map((id) => id.toLowerCase()))];
       };
 
+      // Fungsi unduh mandiri: memeriksa MIME dan fallback ke proxy agar tidak mengunduh berkas error XML S3
+      const downloadAudioFile = async (uuid, filename, btnElement) => {
+        const candidateUrls = [
+          `https://cdn1.suno.ai/${uuid}.mp3`,
+          `https://audiopipe.suno.ai/tracks/${uuid}.mp3`,
+          `https://audiopipe.suno.ai/tracks/${uuid}`
+        ];
+
+        let blobResult = null;
+        let successUrl = '';
+
+        for (const targetUrl of candidateUrls) {
+          // Percobaan 1: Menggunakan proxy CORS codetabs / allorigins
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+          try {
+            const res = await fetch(proxyUrl);
+            if (!res.ok) continue;
+
+            const contentType = res.headers.get('content-type') || '';
+            // Cegah pengunduhan jika CDN mengembalikan respon XML error dari Amazon S3
+            if (contentType.includes('xml')) {
+              continue;
+            }
+
+            const blob = await res.blob();
+            // Validasi ukuran dan signature berkas: berkas XML error biasanya berukuran di bawah 1.5 KB
+            if (blob.size < 2000) {
+              const previewText = await blob.text();
+              if (previewText.includes('<Error>') || previewText.includes('AccessDenied') || previewText.includes('NoSuchKey')) {
+                continue;
+              }
+            }
+
+            blobResult = blob;
+            successUrl = targetUrl;
+            break;
+          } catch (_) {
+            // Lanjut mencoba kandidat URL berikutnya
+          }
+        }
+
+        if (blobResult) {
+          const blobUrl = URL.createObjectURL(blobResult);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+          return true;
+        }
+
+        // Percobaan 2: Buka tab baru dengan direct stream audio jika proxy gagal
+        window.open(candidateUrls[0], '_blank', 'noopener,noreferrer');
+        return false;
+      };
+
       const renderSongList = (uuidList) => {
         songListContainer.innerHTML = '';
 
@@ -503,15 +552,19 @@
           item.className = 'song-item';
           item.innerHTML = `
             <div class="song-head">
-              <img src="${coverUrl}" alt="Cover">
+              <img src="${coverUrl}" alt="Cover" onerror="this.style.display='none'">
               <div class="song-meta">
                 <div class="song-title">Suno Track #${index + 1} (${shortId})</div>
-                <div class="song-uuid">UUID: ${uuid}</div>
+                <div class="song-uuid">ID: ${uuid}</div>
               </div>
             </div>
-            <audio controls preload="none" src="${mp3Url}"></audio>
+            <audio controls preload="none">
+              <source src="${mp3Url}" type="audio/mpeg">
+              <source src="https://audiopipe.suno.ai/tracks/${uuid}.mp3" type="audio/mpeg">
+              Browser tidak mendukung pemutar audio ini.
+            </audio>
             <div class="btn-row">
-              <button type="button" class="btn btn-green dl-trigger" data-mp3="${mp3Url}" data-name="suno-${shortId}.mp3">
+              <button type="button" class="btn btn-green dl-trigger" data-uuid="${uuid}" data-name="suno-${shortId}.mp3">
                 Download MP3
               </button>
               <a href="${mp3Url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
@@ -524,32 +577,31 @@
 
         songListContainer.querySelectorAll('.dl-trigger').forEach((btn) => {
           btn.addEventListener('click', async () => {
-            const url = btn.getAttribute('data-mp3');
+            const uuid = btn.getAttribute('data-uuid');
             const name = btn.getAttribute('data-name');
-            if (!url) return;
+            if (!uuid) return;
 
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Mengunduh...';
+            btn.textContent = 'Memeriksa Audio...';
 
             try {
-              const res = await fetch(url);
-              if (!res.ok) throw new Error('Fallback redirect');
-              const blob = await res.blob();
-              const blobUrl = URL.createObjectURL(blob);
-
-              const a = document.createElement('a');
-              a.href = blobUrl;
-              a.download = name;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              setTimeout(() => URL.revokeObjectURL(blobUrl), 8000);
-            } catch (_) {
-              window.open(url, '_blank', 'noopener,noreferrer');
-            } finally {
-              btn.disabled = false;
+              const isDownloaded = await downloadAudioFile(uuid, name, btn);
+              if (isDownloaded) {
+                btn.textContent = 'Berhasil Diunduh!';
+                setTimeout(() => {
+                  btn.textContent = originalText;
+                  btn.disabled = false;
+                }, 2000);
+              } else {
+                setStatus('Audio tidak tersedia di CDN publik. Tautan dibuka di tab baru.', 'error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+              }
+            } catch (err) {
+              setStatus(`Gagal memproses file: ${err.message}`, 'error');
               btn.textContent = originalText;
+              btn.disabled = false;
             }
           });
         });
@@ -566,7 +618,7 @@
         }
 
         renderSongList(uuids);
-        setStatus(`Berhasil memindai ${uuids.length} lagu Suno siap unduh!`, 'success');
+        setStatus(`Berhasil memindai ${uuids.length} lagu Suno!`, 'success');
       });
 
       sampleBulkBtn.addEventListener('click', () => {
@@ -585,7 +637,7 @@
             copyScriptBtn.textContent = 'Salin Script Bookmarklet';
           }, 2000);
         } catch (_) {
-          setStatus('Silakan tahan dan salin manual teks kuning di dalam kotak.', 'info');
+          setStatus('Tahan dan salin manual teks kuning di dalam kotak skrip.', 'info');
         }
       });
     });
