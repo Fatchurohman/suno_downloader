@@ -215,16 +215,15 @@
 <body>
 
   <main class="container">
-    <!-- PANEL UTAMA: SUNO SCANNER & BULK DOWNLOAD -->
     <section class="panel">
       <h1>Suno Multi-Song Scanner (Bulk MP3)</h1>
-      <p class="desc">Tempel satu atau beberapa link lagu Suno untuk mengekstrak pemutar audio dan mengunduh berkas MP3 secara langsung.</p>
+      <p class="desc">Mendukung tautan panjang (suno.com/song/...), tautan pendek (suno.com/s/...), maupun kode UUID langsung.</p>
 
       <label for="bulkInput">Tautan Lagu Suno:</label>
-      <textarea id="bulkInput" placeholder="Tempel link lagu Suno di sini (satu baris per link)...&#10;Contoh: https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9"></textarea>
+      <textarea id="bulkInput" placeholder="Tempel link lagu Suno di sini...&#10;Contoh: https://suno.com/song/29fb7873-64dc-4f62-a889-c48d5ed71fc1?sh=ONQbaNknyxxj6zHD"></textarea>
 
       <div class="btn-row">
-        <button type="button" id="sampleBulkBtn" class="btn btn-secondary">Isi 2 Contoh</button>
+        <button type="button" id="sampleBulkBtn" class="btn btn-secondary">Isi Contoh</button>
         <button type="button" id="scanBulkBtn" class="btn">Scan Lagu</button>
       </div>
 
@@ -232,10 +231,9 @@
       <div id="songListContainer" class="song-list"></div>
     </section>
 
-    <!-- PANEL PENDUKUNG: BOOKMARKLET SCANNER -->
     <section class="panel">
       <h2>Script Ekstraktor Otomatis (Bookmarklet)</h2>
-      <p class="desc">Jalankan di tab Library akun Suno kamu untuk mengekstrak seluruh track tanpa terhalang proteksi server XML.</p>
+      <p class="desc">Jalankan di tab Library akun Suno kamu untuk mengekstrak seluruh track sekaligus.</p>
       <div id="bookmarkletCode" class="code-box"></div>
       <button type="button" id="copyScriptBtn" class="btn btn-purple">Salin Script Bookmarklet</button>
     </section>
@@ -265,50 +263,84 @@
         statusBox.className = `status ${type}`;
       };
 
-      const extractUniqueUuids = (rawText) => {
-        if (typeof rawText !== 'string' || !rawText.trim()) return [];
-        const matches = rawText.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
+      const extractUuidsFromText = (text) => {
+        if (typeof text !== 'string' || !text.trim()) return [];
+        const matches = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi);
         if (!matches) return [];
         return [...new Set(matches.map((id) => id.toLowerCase()))];
       };
 
-      const downloadAudioFile = async (uuid, filename, btnElement) => {
-        const candidateUrls = [
-          `https://cdn1.suno.ai/${uuid}.mp3`,
-          `https://audiopipe.suno.ai/tracks/${uuid}.mp3`,
-          `https://audiopipe.suno.ai/tracks/${uuid}`
+      const extractShortlinks = (text) => {
+        if (typeof text !== 'string' || !text.trim()) return [];
+        const regex = /https?:\/\/suno\.com\/s\/([a-zA-Z0-9]+)/gi;
+        const links = [];
+        let m;
+        while ((m = regex.exec(text)) !== null) {
+          links.push(m[0]);
+        }
+        return [...new Set(links)];
+      };
+
+      const resolveShortlinkToUuid = async (shortUrl) => {
+        try {
+          const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(shortUrl)}`;
+          const res = await fetch(proxy);
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (!data || typeof data.contents !== 'string') return null;
+
+          const found = extractUuidsFromText(data.contents);
+          return found.length > 0 ? found[0] : null;
+        } catch (_) {
+          return null;
+        }
+      };
+
+      // Validasi ketat respon audio untuk mencegah pengunduhan file JSON/XML error
+      const downloadAudioFile = async (uuid, filename) => {
+        const primaryCdn = `https://cdn1.suno.ai/${uuid}.mp3`;
+        const secondaryCdn = `https://cdn2.suno.ai/${uuid}.mp3`;
+
+        const proxyUrls = [
+          `https://corsproxy.io/?url=${encodeURIComponent(primaryCdn)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(primaryCdn)}`,
+          `https://corsproxy.io/?url=${encodeURIComponent(secondaryCdn)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(secondaryCdn)}`
         ];
 
-        let blobResult = null;
+        let validBlob = null;
 
-        for (const targetUrl of candidateUrls) {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+        for (const url of proxyUrls) {
           try {
-            const res = await fetch(proxyUrl);
+            const res = await fetch(url);
             if (!res.ok) continue;
 
-            const contentType = res.headers.get('content-type') || '';
-            if (contentType.includes('xml')) {
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            
+            // Tolak jika bukan berkas binary/audio
+            if (contentType.includes('json') || contentType.includes('xml') || contentType.includes('html') || contentType.includes('text')) {
               continue;
             }
 
             const blob = await res.blob();
-            if (blob.size < 2000) {
-              const previewText = await blob.text();
-              if (previewText.includes('<Error>') || previewText.includes('AccessDenied') || previewText.includes('NoSuchKey')) {
+
+            // Berkas MP3 Suno memiliki ukuran lebih dari 100 KB; respon error berukuran < 10 KB
+            if (blob.size < 50000) {
+              const snippet = await blob.slice(0, 300).text();
+              if (snippet.includes('{') || snippet.includes('<') || snippet.includes('detail') || snippet.includes('Not Found')) {
                 continue;
               }
             }
 
-            blobResult = blob;
+            validBlob = blob;
             break;
           } catch (_) {
-            // Lanjut ke endpoint cadangan berikutnya
+            // Lanjut ke jalur proxy berikutnya
           }
         }
 
-        if (blobResult) {
-          const blobUrl = URL.createObjectURL(blobResult);
+        if (validBlob) {
+          const blobUrl = URL.createObjectURL(validBlob);
           const a = document.createElement('a');
           a.href = blobUrl;
           a.download = filename;
@@ -319,7 +351,8 @@
           return true;
         }
 
-        window.open(candidateUrls[0], '_blank', 'noopener,noreferrer');
+        // Jalur Fallback: Buka pemutar browser langsung jika proxy terhalang CORS
+        window.open(primaryCdn, '_blank', 'noopener,noreferrer');
         return false;
       };
 
@@ -343,7 +376,7 @@
             </div>
             <audio controls preload="none">
               <source src="${mp3Url}" type="audio/mpeg">
-              <source src="https://audiopipe.suno.ai/tracks/${uuid}.mp3" type="audio/mpeg">
+              <source src="https://cdn2.suno.ai/${uuid}.mp3" type="audio/mpeg">
               Browser tidak mendukung pemutar audio ini.
             </audio>
             <div class="btn-row">
@@ -366,23 +399,23 @@
 
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Memeriksa Audio...';
+            btn.textContent = 'Memverifikasi Audio...';
 
             try {
-              const isDownloaded = await downloadAudioFile(uuid, name, btn);
-              if (isDownloaded) {
+              const success = await downloadAudioFile(uuid, name);
+              if (success) {
                 btn.textContent = 'Berhasil Diunduh!';
                 setTimeout(() => {
                   btn.textContent = originalText;
                   btn.disabled = false;
                 }, 2000);
               } else {
-                setStatus('Audio tidak dapat ditarik otomatis. Membuka di tab baru...', 'info');
+                setStatus('Proteksi CORS mendeteksi request eksternal. Audio telah dibuka di tab baru pemutar browser.', 'info');
                 btn.textContent = originalText;
                 btn.disabled = false;
               }
             } catch (err) {
-              setStatus(`Terjadi gangguan saat mengunduh: ${err.message}`, 'error');
+              setStatus(`Terjadi kegagalan proses: ${err.message}`, 'error');
               btn.textContent = originalText;
               btn.disabled = false;
             }
@@ -390,24 +423,46 @@
         });
       };
 
-      scanBulkBtn.addEventListener('click', () => {
-        const text = bulkInput.value;
-        const uuids = extractUniqueUuids(text);
+      scanBulkBtn.addEventListener('click', async () => {
+        const text = bulkInput.value || '';
+        let detectedUuids = extractUuidsFromText(text);
+        const shortlinks = extractShortlinks(text);
 
-        if (uuids.length === 0) {
+        if (detectedUuids.length === 0 && shortlinks.length === 0) {
           songListContainer.innerHTML = '';
-          setStatus('Tidak ada link atau ID lagu Suno yang valid. Masukkan URL lagu terlebih dahulu.', 'error');
+          setStatus('Tautan tidak valid. Tempel link suno.com/song/... atau kode UUID lagu.', 'error');
           return;
         }
 
-        renderSongList(uuids);
-        setStatus(`Berhasil mendeteksi ${uuids.length} lagu Suno!`, 'success');
+        scanBulkBtn.disabled = true;
+
+        if (shortlinks.length > 0) {
+          setStatus(`Mengurai ${shortlinks.length} tautan pendek Suno...`, 'info');
+          const resolvedPromises = shortlinks.map((link) => resolveShortlinkToUuid(link));
+          const resolvedResults = await Promise.all(resolvedPromises);
+          
+          resolvedResults.forEach((id) => {
+            if (id) detectedUuids.push(id);
+          });
+          detectedUuids = [...new Set(detectedUuids)];
+        }
+
+        scanBulkBtn.disabled = false;
+
+        if (detectedUuids.length === 0) {
+          songListContainer.innerHTML = '';
+          setStatus('Gagal mengurai tautan pendek. Buka tautan di peramban lalu salin URL utuh lagu.', 'error');
+          return;
+        }
+
+        renderSongList(detectedUuids);
+        setStatus(`Berhasil mendeteksi ${detectedUuids.length} lagu Suno siap unduh!`, 'success');
       });
 
       sampleBulkBtn.addEventListener('click', () => {
         bulkInput.value = [
           'https://suno.com/song/d3632e1f-95a4-4f25-8353-042c7c8122f9',
-          'https://suno.com/song/6f4c4902-8f61-4250-98a4-43c65cf28024'
+          'https://suno.com/song/29fb7873-64dc-4f62-a889-c48d5ed71fc1?sh=ONQbaNknyxxj6zHD'
         ].join('\n');
         scanBulkBtn.click();
       });
@@ -420,7 +475,7 @@
             copyScriptBtn.textContent = 'Salin Script Bookmarklet';
           }, 2000);
         } catch (_) {
-          setStatus('Silakan salin teks di dalam kotak secara manual.', 'info');
+          setStatus('Silakan salin teks di dalam kotak skrip secara manual.', 'info');
         }
       });
     });
